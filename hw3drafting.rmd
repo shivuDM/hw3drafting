@@ -1,0 +1,230 @@
+---
+title: "hw3drafting"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE)
+```
+
+## Problem 0
+* created repository and R project for HW3, created rmd file and rending to GitHub. 
+* created a sub-directory/ data folder that has all the data set files to be used for this HW
+
+```{r load libraries}
+library(tidyverse)
+library(readxl)
+library(dplyr)
+library(ggridges)
+library(patchwork)
+library(p8105.datasets)
+options(tibble.print_min = 5)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## Problem 1
+
+reading the data
+
+```{r}
+data("instacart")
+
+instacart = 
+  instacart %>% 
+  as_tibble(instacart)
+```
+
+To see the number of aisles, and the aisles the items were most ordered from:
+
+```{r}
+instacart %>% 
+  count(aisle) %>% 
+  arrange(desc(n))
+```
+
+To plot for the number of items ordered in each aisle: 
+
+```{r}
+instacart %>% 
+  count(aisle) %>% 
+  filter(n > 10000) %>% 
+  mutate(aisle = fct_reorder(aisle, n)) %>% 
+  ggplot(aes(x = aisle, y = n)) + 
+  geom_point() + 
+  labs(title = "Number of items ordered in each aisle") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+To see the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”:
+
+```{r}
+instacart %>% 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>%
+  group_by(aisle) %>% 
+  count(product_name) %>% 
+  mutate(rank = min_rank(desc(n))) %>% 
+  filter(rank < 4) %>% 
+  arrange(desc(n)) %>%
+  knitr::kable()
+```
+
+To make table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week
+
+```{r}
+instacart %>%
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>%
+  group_by(product_name, order_dow) %>%
+  summarize(mean_hour = mean(order_hour_of_day)) %>%
+  spread(key = order_dow, value = mean_hour) %>%
+  knitr::kable(digits = 2)
+```
+
+This data set contains `r nrow(instacart)` rows and `r ncol(instacart)` columns, with each row representing a single product from an instacart order. Variables include identifiers for user, order, and product; the order in which each product was added to the cart. There are several order-level variables, describing the day and time of the order, and number of days since prior order. Then there are several item-specific variables, describing the product name (e.g. Yogurt, Avocado), department (e.g. dairy and eggs, produce), and aisle (e.g. yogurt, fresh fruits), and whether the item has been ordered by this user in the past. In total, there are `r instacart %>% select(product_id) %>% distinct %>% count` products found in `r instacart %>% select(user_id, order_id) %>% distinct %>% count` orders from `r instacart %>% select(user_id) %>% distinct %>% count` distinct users.
+
+### Answers
+* There are 134 aisles, and the items were mostly ordered from 'Fresh Vegetables' and 'Fresh Fruits' aisles.
+* Graph plotted for number of items ordered in each aisle
+* The number of times the items were ordered in the aisle:
+ - packaged vegetables fruits: organic baby spinach: 9784 times, organic raspberries: 5546 times, organic blueberries: 4966 times
+ - baking ingredients: light brown sugar: 499 times, pure baking soda: 387 times, cane sugar: 336 times
+ - dog food care: snack sticks chicken and rice recipe dog treats: 30 times, organic chicken and brown rice recipe: 28 times, small dog biscuits: 26 times 
+* The mean hour of the day at which Coffee ice cream and Pink lady apples was delivered, displayed during the week.
+
+
+## Problem 2
+
+```{r accelerometers cleaning, message = FALSE}
+acc_ds = read_csv(
+    "data/accel_data.csv") %>%
+  janitor::clean_names() %>%
+  pivot_longer (activity_1:activity_1440,
+names_to = "minute_act",
+names_prefix = "activity_",
+values_to = "physical_activity") %>%
+  mutate (minute_act = as.numeric (minute_act),
+          wd_vs_wknd = case_when (day == "Monday" ~ "weekday", day == "Tuesday" ~ "weekday", day == "Wednesday" ~ "weekday", day == "Thursday" ~ "weekday", day == "Friday" ~ "weekday", day == "Saturday" ~ "weekend",day == "Sunday" ~ "weekend"))
+ 
+```
+
+Describing the dataset:
+- The total number of observations/rows are **`r nrow(acc_ds)`** and the total number of variables/columns are **`r ncol(acc_ds)`**
+- The key variables in this data set are **`r colnames(acc_ds)`**
+
+```{r summarizing by day}
+agg_acc_ds = acc_ds %>%
+  select (everything()) %>%
+  group_by(week,day) %>%
+  summarise (total_activity = sum(physical_activity)) %>%
+  pivot_wider(names_from = day,
+    values_from = total_activity) %>%
+select ("week","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
+  
+```
+
+
+
+```{r making plot, warning = FALSE}
+plot_acc_ds = acc_ds %>%
+  mutate (hour = minute_act/60)
+
+
+ggplot(plot_acc_ds, aes(x = hour, y = physical_activity, color = day)) + 
+  geom_point() + geom_line()
+```
+
+
+## Problem 3
+
+Reading ny_noaa dataset
+
+```{r}
+data("ny_noaa")
+
+ny_noaa = ny_noaa %>%
+ as_tibble (ny_noaa)
+```
+
+`r skimr:: skim(ny_noaa)`
+
+cleaning the data
+
+```{r}
+ny_noaa_clean = ny_noaa %>%
+  janitor::clean_names() %>%
+  separate(col= date, into = c("year", "month", "day"), sep ='-', convert = TRUE) %>%
+  mutate (month = month.abb[month],
+    tmax = as.numeric(tmax),
+          tmin = as.numeric(tmin),
+          prcp = prcp/10) %>%
+  select (id, year, month, day, everything ()) %>%
+  mutate (tmax = tmax/10, tmin = tmin/10)
+```
+
+`r skimr:: skim(ny_noaa_clean)`
+
+* The most commonly observed values for snowfall are 0. It states that there was no snowfall on most number of days.
+
+making 2-panel plots for avg max temperature:
+```{r}
+ny_noaa_clean_plot1 =  ny_noaa_clean %>% 
+  group_by(id, year, month) %>%
+  summarise(tmax_avg = mean(tmax), na.rm = TRUE)%>%
+  filter (month %in% c ("Jan", "Jul")) %>%
+  ggplot(aes(x = year, y = tmax_avg, color = id)) + 
+  geom_point(alpha = 0.5) + 
+  theme(legend.position = "none")+
+  facet_grid(.~ month)+
+  labs(
+    title = "Avg Max Temp plot",
+    x = "Year",
+    y = "Average Max temperature (C)")
+
+ny_noaa_clean_plot1
+  
+```
+
+* 
+
+making 2-panel plots for
+
+```{r}
+tmax_tmin = ny_noaa_clean %>%
+  ggplot(aes(x = tmax, y = tmin, fill = id)) + 
+  geom_boxplot () + 
+  theme (legend.position = "none")
+
+tmax_tmin
+```
+
+```{r}
+snowfall_year = ny_noaa_clean %>%
+  filter (snow %in% 1.0:99.0) %>%
+  ggplot(aes(x = year, y = snow, fill = id)) + 
+  geom_boxplot () + 
+  theme(legend.position = "none")
+
+snowfall_year
+```
+
+```{r}
+tmax_tmin + snowfall_year
+```
+
+
+
+
