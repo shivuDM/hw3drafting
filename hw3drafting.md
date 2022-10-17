@@ -152,6 +152,8 @@ products found in 131209 orders from 131209 distinct users.
 
 ## Problem 2
 
+Loading and tidying the data, adding new variable
+
 ``` r
 acc_ds = read_csv(
     "data/accel_data.csv") %>%
@@ -164,31 +166,103 @@ values_to = "physical_activity") %>%
           wd_vs_wknd = case_when (day == "Monday" ~ "weekday", day == "Tuesday" ~ "weekday", day == "Wednesday" ~ "weekday", day == "Thursday" ~ "weekday", day == "Friday" ~ "weekday", day == "Saturday" ~ "weekend",day == "Sunday" ~ "weekend"))
 ```
 
+|                                                  |        |
+|:-------------------------------------------------|:-------|
+| Name                                             | acc_ds |
+| Number of rows                                   | 50400  |
+| Number of columns                                | 6      |
+| \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_   |        |
+| Column type frequency:                           |        |
+| character                                        | 2      |
+| numeric                                          | 4      |
+| \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ |        |
+| Group variables                                  | None   |
+
+Data summary
+
+**Variable type: character**
+
+| skim_variable | n_missing | complete_rate | min | max | empty | n_unique | whitespace |
+|:--------------|----------:|--------------:|----:|----:|------:|---------:|-----------:|
+| day           |         0 |             1 |   6 |   9 |     0 |        7 |          0 |
+| wd_vs_wknd    |         0 |             1 |   7 |   7 |     0 |        2 |          0 |
+
+**Variable type: numeric**
+
+| skim_variable     | n_missing | complete_rate |   mean |     sd |  p0 |    p25 |   p50 |     p75 | p100 | hist  |
+|:------------------|----------:|--------------:|-------:|-------:|----:|-------:|------:|--------:|-----:|:------|
+| week              |         0 |             1 |   3.00 |   1.41 |   1 |   2.00 |   3.0 |    4.00 |    5 | ▇▇▇▇▇ |
+| day_id            |         0 |             1 |  18.00 |  10.10 |   1 |   9.00 |  18.0 |   27.00 |   35 | ▇▇▇▇▇ |
+| minute_act        |         0 |             1 | 720.50 | 415.70 |   1 | 360.75 | 720.5 | 1080.25 | 1440 | ▇▇▇▇▇ |
+| physical_activity |         0 |             1 | 267.04 | 443.16 |   1 |   1.00 |  74.0 |  364.00 | 8982 | ▇▁▁▁▁ |
+
 Describing the dataset: - The total number of observations/rows are
 **50400** and the total number of variables/columns are **6** - The key
 variables in this data set are **week, day_id, day, minute_act,
 physical_activity, wd_vs_wknd**
 
+Aggregating across minutes to create a total activity variable for each
+day, and creating a table showing these totals
+
 ``` r
 agg_acc_ds = acc_ds %>%
-  select (everything()) %>%
   group_by(week,day) %>%
   summarise (total_activity = sum(physical_activity)) %>%
   pivot_wider(names_from = day,
     values_from = total_activity) %>%
 select ("week","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
+  
+agg_acc_ds %>%
+  knitr::kable()
 ```
+
+| week |    Monday |  Tuesday | Wednesday | Thursday |   Friday | Saturday | Sunday |
+|-----:|----------:|---------:|----------:|---------:|---------:|---------:|-------:|
+|    1 |  78828.07 | 307094.2 |    340115 | 355923.6 | 480542.6 |   376254 | 631105 |
+|    2 | 295431.00 | 423245.0 |    440962 | 474048.0 | 568839.0 |   607175 | 422018 |
+|    3 | 685910.00 | 381507.0 |    468869 | 371230.0 | 467420.0 |   382928 | 467052 |
+|    4 | 409450.00 | 319568.0 |    434460 | 340291.0 | 154049.0 |     1440 | 260617 |
+|    5 | 389080.00 | 367824.0 |    445366 | 549658.0 | 620860.0 |     1440 | 138421 |
+
+-   **according to this, the physical activity is increasing throughout
+    the weekdays from Monday through Friday, is the least on Saturday,
+    and increases again on Sundays.**
 
 ``` r
 plot_acc_ds = acc_ds %>%
   mutate (hour = minute_act/60)
 
-
 ggplot(plot_acc_ds, aes(x = hour, y = physical_activity, color = day)) + 
-  geom_point() + geom_line()
+  geom_point (alpha = 0.5) + geom_line()
 ```
 
 <img src="hw3drafting_files/figure-gfm/making plot-1.png" width="90%" />
+
+``` r
+  theme(legend.position = "none")+
+  labs(
+    title = "physical activity by hour for each day",
+    x = "Hour",
+    y = "Physical activity")
+```
+
+    ## List of 4
+    ##  $ legend.position: chr "none"
+    ##  $ x              : chr "Hour"
+    ##  $ y              : chr "Physical activity"
+    ##  $ title          : chr "physical activity by hour for each day"
+    ##  - attr(*, "class")= chr [1:2] "theme" "gg"
+    ##  - attr(*, "complete")= logi FALSE
+    ##  - attr(*, "validate")= logi TRUE
+
+-   **According to this, the physical activity increases everyday after
+    5:00 am and is maintained throughout the day till around 19:00 hrs.
+    It peaks between about 19:00 to 22:00 hrs and then gradually
+    subsides. The period from \~ 23:00 to 5:00 hrs in the morning is the
+    lowest (implying the person sleeps during that time). The activity
+    around 19:00 hrs is the highest for Wednesday.The activity between
+    around 19:00 through 22:00 hrs is the highest for Fridays. Daytime
+    activity \~10:00 - \~12:00 is high for Sunday.**
 
 ## Problem 3
 
@@ -285,8 +359,8 @@ Data summary
 | tmax          |   1134358 |          0.56 |   13.98 |  11.14 |  -38.9 |    5.0 |   15.0 |   23.3 |    60 | ▁▂▇▆▁ |
 | tmin          |   1134420 |          0.56 |    3.03 |  10.40 |  -59.4 |   -3.9 |    3.3 |   11.1 |    60 | ▁▁▇▂▁ |
 
--   The most commonly observed values for snowfall are 0. It states that
-    there was no snowfall on most number of days.
+-   The most commonly observed values for snowfall are **0**. It states
+    that **there was no snowfall on most number of days.**
 
 making 2-panel plots for avg max temperature:
 
@@ -297,10 +371,10 @@ ny_noaa_clean_plot1 =  ny_noaa_clean %>%
   filter (month %in% c ("Jan", "Jul")) %>%
   ggplot(aes(x = year, y = tmax_avg, color = id)) + 
   geom_point(alpha = 0.5) + 
-  theme(legend.position = "none")+
+  theme(legend.position = "none", axis.text.x = element_text(angle = 60, hjust = 1))+
   facet_grid(.~ month)+
   labs(
-    title = "Avg Max Temp plot",
+    title = "Avg Max Temp plot for Jan and July",
     x = "Year",
     y = "Average Max temperature (C)")
 
@@ -309,15 +383,24 @@ ny_noaa_clean_plot1
 
 <img src="hw3drafting_files/figure-gfm/unnamed-chunk-8-1.png" width="90%" />
 
--   
+-   According to this, it can be seen that **the average maximum
+    temperature was lower overall in January as compared to July for the
+    years 1981-2010**. There is an **outlier for the month of July
+    \~1988 when the maximum temperature was \~ 14 degree Celsius**.
+    Also, **the range of average maximum temperatures is wider for
+    January than the range of average maximum temperatures for July**.
 
-making 2-panel plots for
+making 2-panel plots for tmax tmin and snowfall
 
 ``` r
 tmax_tmin = ny_noaa_clean %>%
-  ggplot(aes(x = tmax, y = tmin, fill = id)) + 
-  geom_boxplot () + 
-  theme (legend.position = "none")
+  ggplot(aes(x = tmax, y = tmin)) + 
+  geom_hex () + 
+  theme (legend.position = "right")+
+  labs (
+    title = "tmax vs tmin",
+    x = "tmax (C)",
+    y = "tmin (C)")
 
 tmax_tmin
 ```
@@ -326,18 +409,25 @@ tmax_tmin
 
 ``` r
 snowfall_year = ny_noaa_clean %>%
+  group_by (year) %>%
   filter (snow %in% 1.0:99.0) %>%
-  ggplot(aes(x = year, y = snow, fill = id)) + 
-  geom_boxplot () + 
-  theme(legend.position = "none")
+  ggplot(aes(x = snow, y = as.factor(year))) + 
+  geom_density_ridges() + 
+  theme(legend.position = "none")+
+  labs(
+    title = "Snowfall Distribution by Years",
+    x = "Snowfall (mm)",
+    y = "Year")
 
 snowfall_year
 ```
 
-<img src="hw3drafting_files/figure-gfm/unnamed-chunk-10-1.png" width="90%" />
+<img src="hw3drafting_files/figure-gfm/unnamed-chunk-9-2.png" width="90%" />
 
 ``` r
 tmax_tmin + snowfall_year
 ```
 
-<img src="hw3drafting_files/figure-gfm/unnamed-chunk-11-1.png" width="90%" />
+<img src="hw3drafting_files/figure-gfm/unnamed-chunk-9-3.png" width="90%" />
+
+-   According
